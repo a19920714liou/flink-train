@@ -13,12 +13,14 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.util.Collector;
 
 public class WordCount {
+    //kafka-console-producer --broker-list  192.168.1.211:9092 --topic lzy-topic1
     final static String inputTopic = "lzy-topic1";
+    //kafka-console-consumer  --bootstrap-server  192.168.1.211:9092 --topic lzy-topic2 --from-beginning
     final static String outputTopic = "lzy-topic2";
     final static String jobTitle = "WordCount";
 
     public static void main(String[] args) throws Exception {
-        final String bootstrapServers = args.length > 0 ? args[0] : "work02:9092,master:9092,work03:9092";
+        final String bootstrapServers = args.length > 0 ? args[0] : "192.168.1.211:9092,192.168.1.212:9092,192.168.1.213:9092";
 
         // Set up the streaming execution environment
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
