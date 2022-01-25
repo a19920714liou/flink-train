@@ -8,11 +8,16 @@ import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
 import org.apache.flink.connector.kafka.sink.KafkaSink;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
+import org.apache.flink.runtime.security.SecurityConfiguration;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.util.Collector;
+import org.apache.kafka.clients.producer.ProducerConfig;
+
+import java.util.Properties;
 
 public class WordCount {
+    // kafka-topics --zookeeper work01:2181 work02:2181 work03:2181 --create --replication-factor 1 --partitions 1 --topic lzy-topic1
     //kafka-console-producer --broker-list  192.168.1.211:9092 --topic lzy-topic1
     final static String inputTopic = "lzy-topic1";
     //kafka-console-consumer  --bootstrap-server  192.168.1.211:9092 --topic lzy-topic2 --from-beginning
@@ -20,17 +25,21 @@ public class WordCount {
     final static String jobTitle = "WordCount";
 
     public static void main(String[] args) throws Exception {
-        final String bootstrapServers = args.length > 0 ? args[0] : "192.168.1.211:9092,192.168.1.212:9092,192.168.1.213:9092";
+        final String bootstrapServers = args.length > 0 ? args[0] : "192.168.0.163:9092,192.168.0.164:9092,192.168.0.165:9092";
 
         // Set up the streaming execution environment
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-
+        Properties properties = new Properties();
+        properties.setProperty("security.protocol", "SASL_PLAINTEXT");
+        properties.setProperty("sasl.mechanism", "GSSAPI");
+        properties.setProperty("sasl.kerberos.service.name", "kafka");
         KafkaSource<String> source = KafkaSource.<String>builder()
                 .setBootstrapServers(bootstrapServers)
                 .setTopics(inputTopic)
                 .setGroupId("my-group")
                 .setStartingOffsets(OffsetsInitializer.earliest())
                 .setValueOnlyDeserializer(new SimpleStringSchema())
+                .setProperties(properties)
                 .build();
 
         KafkaRecordSerializationSchema<String> serializer = KafkaRecordSerializationSchema.builder()
@@ -39,6 +48,7 @@ public class WordCount {
                 .build();
 
         KafkaSink<String> sink = KafkaSink.<String>builder()
+                .setKafkaProducerConfig(properties)
                 .setBootstrapServers(bootstrapServers)
                 .setRecordSerializer(serializer)
                 .build();
