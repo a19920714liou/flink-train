@@ -25,14 +25,17 @@ public class WordCount {
     final static String jobTitle = "WordCount";
 
     public static void main(String[] args) throws Exception {
+        System.setProperty("java.security.auth.login.config", "/usr/hdp/current/kafka-broker/conf/kafka_client_jaas.conf");
         final String bootstrapServers = args.length > 0 ? args[0] : "192.168.0.163:9092,192.168.0.164:9092,192.168.0.165:9092";
 
         // Set up the streaming execution environment
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        //增加Kerberos认证
         Properties properties = new Properties();
         properties.setProperty("security.protocol", "SASL_PLAINTEXT");
         properties.setProperty("sasl.mechanism", "GSSAPI");
         properties.setProperty("sasl.kerberos.service.name", "kafka");
+        //消费者
         KafkaSource<String> source = KafkaSource.<String>builder()
                 .setBootstrapServers(bootstrapServers)
                 .setTopics(inputTopic)
@@ -46,7 +49,7 @@ public class WordCount {
                 .setValueSerializationSchema(new SimpleStringSchema())
                 .setTopic(outputTopic)
                 .build();
-
+        //生产者
         KafkaSink<String> sink = KafkaSink.<String>builder()
                 .setKafkaProducerConfig(properties)
                 .setBootstrapServers(bootstrapServers)
