@@ -4,8 +4,6 @@ import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
-import org.apache.flink.connector.kafka.sink.KafkaSink;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.runtime.security.SecurityConfiguration;
@@ -44,7 +42,7 @@ public class WordCount {
                 .setValueOnlyDeserializer(new SimpleStringSchema())
                 .setProperties(properties)
                 .build();
-
+/*
         KafkaRecordSerializationSchema<String> serializer = KafkaRecordSerializationSchema.builder()
                 .setValueSerializationSchema(new SimpleStringSchema())
                 .setTopic(outputTopic)
@@ -54,7 +52,7 @@ public class WordCount {
                 .setKafkaProducerConfig(properties)
                 .setBootstrapServers(bootstrapServers)
                 .setRecordSerializer(serializer)
-                .build();
+                .build();*/
 
         DataStream<String> text = env.fromSource(source, WatermarkStrategy.noWatermarks(), "Kafka Source");
 
@@ -68,7 +66,7 @@ public class WordCount {
 
         // Add the sink to so results
         // are written to the outputTopic
-        counts.sinkTo(sink);
+        counts.addSink(MyKafkaUtil.getKafkaSink("outputTopic"));
 
         // Execute program
         env.execute(jobTitle);
