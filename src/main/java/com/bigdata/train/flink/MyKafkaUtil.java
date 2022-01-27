@@ -10,10 +10,11 @@ public class MyKafkaUtil {
     public static FlinkKafkaProducer getKafkaSink(String topicName) {
         //增加Kerberos认证
         Properties properties = new Properties();
-        properties.put("bootstrap.servers", "192.168.0.163:9092,192.168.0.164:9092,192.168.0.165:9092");
-        properties.setProperty("security.protocol", "SASL_PLAINTEXT");
+        //properties.put("bootstrap.servers", "192.168.0.163:9092,192.168.0.164:9092,192.168.0.165:9092");
+        properties.put("bootstrap.servers", "192.168.0.201:9092,192.168.0.203:9092,192.168.0.204:9092");
+/*        properties.setProperty("security.protocol", "SASL_PLAINTEXT");
         properties.setProperty("sasl.mechanism", "GSSAPI");
-        properties.setProperty("sasl.kerberos.service.name", "kafka");
+        properties.setProperty("sasl.kerberos.service.name", "kafka");*/
         FlinkKafkaProducer<String> myProducer = new FlinkKafkaProducer<String>(
                 topicName,
                 new SimpleStringSchema(),

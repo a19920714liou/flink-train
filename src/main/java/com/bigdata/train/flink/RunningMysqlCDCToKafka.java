@@ -1,24 +1,20 @@
 package com.bigdata.train.flink;
 
 import com.ververica.cdc.connectors.mysql.source.MySqlSource;
-import com.ververica.cdc.debezium.JsonDebeziumDeserializationSchema;
+import com.ververica.cdc.connectors.mysql.table.StartupOptions;
+import com.ververica.cdc.debezium.StringDebeziumDeserializationSchema;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
+import org.apache.flink.runtime.state.filesystem.FsStateBackend;
+import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
+import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 
 public class RunningMysqlCDCToKafka {
 
     public static void main(String[] args) throws Exception {
 
-        MySqlSource<String> mySqlSource = MySqlSource.<String>builder()
-                .hostname("192.168.0.8")
-                .port(3306)
-                .databaseList("dolphinscheduler") // set captured database
-                .tableList("dolphinscheduler.user_log") // set captured table
-                .username("root")
-                .password("root")
-                .deserializer(new JsonDebeziumDeserializationSchema()) // converts SourceRecord to JSON String
-                .build();
         //创建Flink-MySQL-CDC的Source
         /*MySqlSource<String> mySqlSource =
                 MySqlSource.<String>builder().hostname("192.168.0.8")
@@ -74,18 +70,36 @@ public class RunningMysqlCDCToKafka {
 
 
         //创建执行环境
-        StreamExecutionEnvironment env = StreamExecutionEnvironment.createRemoteEnvironment("192.168.0.165", 8081, "E:\\GitHub\\flink-train\\target\\flink-train-1.0-jar-with-dependencies.jar");
-        //StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.setParallelism(1);
+        StreamExecutionEnvironment env = StreamExecutionEnvironment.createRemoteEnvironment("192.168.0.203", 8081, "E:\\GitHub\\flink-train\\target\\flink-train-1.0-jar-with-dependencies.jar");
+        // StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        /*env.setParallelism(1);*/
         // enable checkpoint
-        env.enableCheckpointing(3000);
+        env.enableCheckpointing(5000L);
+        env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE);
+        // 设置任务关闭时候保留最后一次checkpoint 的数据
+        env.getCheckpointConfig().enableExternalizedCheckpoints(CheckpointConfig.ExternalizedCheckpointCleanup.RETAIN_ON_CANCELLATION);
+        // 指定ck 的自动重启策略
+        env.setStateBackend(new FsStateBackend("hdfs://nameservice1:8020/flinkCDC"));
+        // 设置hdfs 的访问用户名
+        System.setProperty("HADOOP_USER_NAME", "hdfs");
+        StreamTableEnvironment tabEnv = StreamTableEnvironment.create(env);
+      /*  MySqlSource<String> mySqlSource = MySqlSource.<String>builder().hostname("192.168.0.8").port(3306).databaseList("dolphinscheduler") // set captured database
+                .tableList("dolphinscheduler.user_log") // set captured table
+                .username("root").password("root").deserializer(new StringDebeziumDeserializationSchema()) // converts SourceRecord to JSON String
+                .startupOptions(StartupOptions.initial()).build();*/
 
+        MySqlSource<String> mySqlSource = MySqlSource.<String>builder().hostname("192.168.0.108").port(23306).databaseList("dolphinscheduler2") // set captured database
+                .tableList("dolphinscheduler2.user_log") // set captured table
+                .username("root").password("root").deserializer(new StringDebeziumDeserializationSchema()) // converts SourceRecord to JSON String
+                .startupOptions(StartupOptions.initial()).build();
         //使用CDC Source从MySQL读取数据
-        DataStreamSource<String> mysqlDS =
-                env.fromSource(mySqlSource, WatermarkStrategy.noWatermarks(), "MySQL Source")
+        DataStreamSource<String> mysqlDS = env.fromSource(mySqlSource, WatermarkStrategy.noWatermarks(), "MySQL Source")
                 // set 4 parallel source tasks
                 /*.setParallelism(4)*/;
+
         //打印数据
+        mysqlDS.print();
+
         mysqlDS.addSink(MyKafkaUtil.getKafkaSink("lzy-topic1"));
         //执行任务
         env.execute("RunningMysqlCDCToKafka");
